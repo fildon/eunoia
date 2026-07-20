@@ -13,7 +13,6 @@ import {
   YAxis,
 } from "recharts";
 import type { MoodEntry } from "@/lib/moodEntries";
-import { MOOD_TAGS } from "@/lib/tags";
 import { moodColor } from "@/lib/moodColor";
 
 function formatShortDate(dateStr: string): string {
@@ -29,14 +28,14 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
       mood: entry.mood,
     }));
 
-  const tagAverages = MOOD_TAGS.map((tag) => {
-    const withTag = entries.filter((e) => e.tags.includes(tag.id));
-    const average =
-      withTag.length === 0
-        ? 0
-        : withTag.reduce((sum, e) => sum + e.mood, 0) / withTag.length;
-    return { tag: tag.label, average: Number(average.toFixed(2)), count: withTag.length };
-  }).filter((t) => t.count > 0);
+  const uniqueTags = Array.from(new Set(entries.flatMap((e) => e.tags)));
+  const tagAverages = uniqueTags
+    .map((tag) => {
+      const withTag = entries.filter((e) => e.tags.includes(tag));
+      const average = withTag.reduce((sum, e) => sum + e.mood, 0) / withTag.length;
+      return { tag, average: Number(average.toFixed(2)), count: withTag.length };
+    })
+    .sort((a, b) => b.count - a.count);
 
   if (entries.length === 0) {
     return (

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { upsertEntry, type MoodEntry } from "@/lib/moodEntries";
-import { MOOD_TAGS } from "@/lib/tags";
 import { todayDateString } from "@/lib/date";
 import { moodColor } from "@/lib/moodColor";
 
@@ -18,15 +17,22 @@ const MOOD_OPTIONS = [
 export function MoodEntryForm({
   userId,
   initialEntry,
+  existingTags,
 }: {
   userId: string;
   initialEntry: MoodEntry | null;
+  existingTags: string[];
 }) {
   const [mood, setMood] = useState<number | null>(initialEntry?.mood ?? null);
   const [tags, setTags] = useState<string[]>(initialEntry?.tags ?? []);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [showNewTagInput, setShowNewTagInput] = useState(false);
+  const [newTagText, setNewTagText] = useState("");
+
+  // Tags already on this entry might not appear in existingTags (e.g. loaded before any other entry existed).
+  const knownTags = Array.from(new Set([...existingTags, ...tags]));
 
   function toggleTag(tagId: string) {
     setTags((current) =>
@@ -34,6 +40,22 @@ export function MoodEntryForm({
         ? current.filter((t) => t !== tagId)
         : [...current, tagId],
     );
+  }
+
+  function addNewTag() {
+    const trimmed = newTagText.trim();
+    setNewTagText("");
+    setShowNewTagInput(false);
+    if (!trimmed) return;
+
+    const existingMatch = knownTags.find(
+      (t) => t.toLowerCase() === trimmed.toLowerCase(),
+    );
+    const tagToAdd = existingMatch ?? trimmed;
+    setTags((current) =>
+      current.includes(tagToAdd) ? current : [...current, tagToAdd],
+    );
+    setStatus("idle");
   }
 
   async function handleSave() {
@@ -96,23 +118,52 @@ export function MoodEntryForm({
           What&apos;s influencing it? (optional)
         </h2>
         <div className="flex flex-wrap gap-2">
-          {MOOD_TAGS.map((tag) => (
+          {knownTags.map((tag) => (
             <button
-              key={tag.id}
+              key={tag}
               type="button"
               onClick={() => {
-                toggleTag(tag.id);
+                toggleTag(tag);
                 setStatus("idle");
               }}
               className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                tags.includes(tag.id)
+                tags.includes(tag)
                   ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               }`}
             >
-              {tag.label}
+              {tag}
             </button>
           ))}
+
+          {showNewTagInput ? (
+            <input
+              autoFocus
+              type="text"
+              value={newTagText}
+              onChange={(e) => setNewTagText(e.target.value)}
+              onBlur={addNewTag}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addNewTag();
+                } else if (e.key === "Escape") {
+                  setNewTagText("");
+                  setShowNewTagInput(false);
+                }
+              }}
+              placeholder="New tag"
+              className="w-28 rounded-full border border-gray-300 px-3 py-1.5 text-sm outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowNewTagInput(true)}
+              className="rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+            >
+              + Add tag
+            </button>
+          )}
         </div>
       </div>
 

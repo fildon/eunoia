@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTodayEntry } from "@/lib/moodEntries";
+import { getTodayEntry, getTagUsage } from "@/lib/moodEntries";
 import { MoodEntryForm } from "@/components/MoodEntryForm";
 
 export default async function TodayPage() {
@@ -10,12 +10,19 @@ export default async function TodayPage() {
 
   if (!user) return null;
 
-  const todayEntry = await getTodayEntry(supabase);
+  const [todayEntry, existingTags] = await Promise.all([
+    getTodayEntry(supabase),
+    getTagUsage(supabase),
+  ]);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-2 p-8">
       <h1 className="mb-4 text-xl font-semibold">Today</h1>
-      <MoodEntryForm userId={user.id} initialEntry={todayEntry} />
+      <MoodEntryForm
+        userId={user.id}
+        initialEntry={todayEntry}
+        existingTags={existingTags}
+      />
     </main>
   );
 }

@@ -1,6 +1,5 @@
 import type { MoodEntry } from "@/lib/moodEntries";
 import { moodColor, moodEmoji } from "@/lib/moodColor";
-import { tagLabel } from "@/lib/tags";
 
 function formatDate(dateStr: string): { day: string; monthYear: string } {
   const date = new Date(`${dateStr}T00:00:00`);
@@ -56,7 +55,7 @@ export function MoodHistoryList({ entries }: { entries: MoodEntry[] }) {
                 </span>
                 {entry.tags.length > 0 && (
                   <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {entry.tags.map(tagLabel).join(", ")}
+                    {entry.tags.join(", ")}
                   </span>
                 )}
               </div>
