@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getEntryByDate, upsertEntry, type MoodEntry } from "@/lib/moodEntries";
 import { formatDisplayDate, toDateString } from "@/lib/date";
@@ -23,6 +24,7 @@ export function MoodEntryForm({
   initialEntry: MoodEntry | null;
   existingTags: string[];
 }) {
+  const router = useRouter();
   const [mood, setMood] = useState<number | null>(initialEntry?.mood ?? null);
   const [tags, setTags] = useState<string[]>(initialEntry?.tags ?? []);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
@@ -103,6 +105,10 @@ export function MoodEntryForm({
         tags,
       });
       setStatus("saved");
+      // Writes go straight to Supabase, bypassing Next's revalidation, so
+      // History/Trends' client-cached pages (see staleTimes.dynamic) need an
+      // explicit bust or they'd keep showing pre-save data for a while.
+      router.refresh();
     } catch {
       setStatus("error");
     }
