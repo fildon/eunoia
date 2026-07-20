@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { upsertEntry, type MoodEntry } from "@/lib/moodEntries";
-import { todayDateString } from "@/lib/date";
+import { getEntryByDate, upsertEntry, type MoodEntry } from "@/lib/moodEntries";
+import { formatDisplayDate, toDateString } from "@/lib/date";
 import { moodColor } from "@/lib/moodColor";
 
 const MOOD_OPTIONS = [
@@ -30,6 +30,40 @@ export function MoodEntryForm({
   );
   const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagText, setNewTagText] = useState("");
+  const [today, setToday] = useState(() => new Date());
+
+  // Tab stays open across midnight, so the day can roll over without a
+  // refresh. Poll (and check on refocus) for that, and reload today's entry
+  // when it happens — otherwise saving would write yesterday's stale
+  // mood/tags into the new day's row.
+  const todayRef = useRef(today);
+  useEffect(() => {
+    todayRef.current = today;
+  }, [today]);
+
+  useEffect(() => {
+    async function checkForNewDay() {
+      const now = new Date();
+      if (toDateString(now) === toDateString(todayRef.current)) return;
+
+      setToday(now);
+      const supabase = createClient();
+      const freshEntry = await getEntryByDate(supabase, toDateString(now));
+      setMood(freshEntry?.mood ?? null);
+      setTags(freshEntry?.tags ?? []);
+      setStatus("idle");
+    }
+
+    const interval = setInterval(checkForNewDay, 60_000);
+    document.addEventListener("visibilitychange", checkForNewDay);
+    window.addEventListener("focus", checkForNewDay);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkForNewDay);
+      window.removeEventListener("focus", checkForNewDay);
+    };
+  }, []);
 
   // Tags already on this entry might not appear in existingTags (e.g. loaded before any other entry existed).
   const knownTags = Array.from(new Set([...existingTags, ...tags]));
@@ -64,7 +98,7 @@ export function MoodEntryForm({
     try {
       const supabase = createClient();
       await upsertEntry(supabase, userId, {
-        entry_date: todayDateString(),
+        entry_date: toDateString(today),
         mood,
         tags,
       });
@@ -76,6 +110,9 @@ export function MoodEntryForm({
 
   return (
     <div className="flex w-full max-w-md flex-col gap-6">
+      <p className="-mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
+        {formatDisplayDate(today)}
+      </p>
       <div>
         <h2 className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-300">
           How are you feeling today?

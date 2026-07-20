@@ -10,3 +10,11 @@ export function toDateString(date: Date): string {
 export function todayDateString(): string {
   return toDateString(new Date());
 }
+
+export function formatDisplayDate(date: Date): string {
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
