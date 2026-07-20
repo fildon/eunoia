@@ -1,25 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTodayEntry, getTagUsage } from "@/lib/moodEntries";
+import { listEntries, getTagUsage } from "@/lib/moodEntries";
 import { MoodEntryForm } from "@/components/MoodEntryForm";
+import { todayDateString } from "@/lib/date";
 
 export default async function TodayPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) return null;
+  if (!session) return null;
 
-  const [todayEntry, existingTags] = await Promise.all([
-    getTodayEntry(supabase),
-    getTagUsage(supabase),
-  ]);
+  const entries = await listEntries(supabase);
+  const todayEntry =
+    entries.find((entry) => entry.entry_date === todayDateString()) ?? null;
+  const existingTags = getTagUsage(entries);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-2 p-8">
       <h1 className="mb-4 text-xl font-semibold">Today</h1>
       <MoodEntryForm
-        userId={user.id}
+        userId={session.user.id}
         initialEntry={todayEntry}
         existingTags={existingTags}
       />

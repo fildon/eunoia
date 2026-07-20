@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { todayDateString } from "./date";
 
 export type MoodEntry = {
   id: string;
@@ -23,12 +22,6 @@ export async function getEntryByDate(
 
   if (error) throw error;
   return data;
-}
-
-export async function getTodayEntry(
-  supabase: SupabaseClient,
-): Promise<MoodEntry | null> {
-  return getEntryByDate(supabase, todayDateString());
 }
 
 export async function upsertEntry(
@@ -72,8 +65,7 @@ export async function listEntries(
   return data ?? [];
 }
 
-export async function getTagUsage(supabase: SupabaseClient): Promise<string[]> {
-  const entries = await listEntries(supabase);
+export function getTagUsage(entries: MoodEntry[]): string[] {
   const counts = new Map<string, number>();
   for (const entry of entries) {
     for (const tag of entry.tags) {
