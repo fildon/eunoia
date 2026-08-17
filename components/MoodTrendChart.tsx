@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { MoodEntry } from "@/lib/moodEntries";
+import { getWeekdayAverages, type MoodEntry } from "@/lib/moodEntries";
 import { moodColor } from "@/lib/moodColor";
 
 function formatShortDate(dateStr: string): string {
@@ -36,6 +36,8 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
       return { tag, average: Number(average.toFixed(2)), count: withTag.length };
     })
     .sort((a, b) => b.count - a.count);
+
+  const weekdayAverages = getWeekdayAverages(entries);
 
   if (entries.length === 0) {
     return (
@@ -112,6 +114,27 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
           </ResponsiveContainer>
         </div>
       )}
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+          Average mood by weekday
+        </h2>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={weekdayAverages} margin={{ left: -20 }}>
+            <XAxis dataKey="weekday" tick={axisTick} />
+            <YAxis domain={[0, 5]} allowDecimals={false} tick={axisTick} />
+            <Tooltip />
+            <Bar dataKey="average" radius={[4, 4, 0, 0]}>
+              {weekdayAverages.map((entry) => (
+                <Cell
+                  key={entry.weekday}
+                  fill={entry.average === null ? "#9ca3af" : moodColor(Math.round(entry.average))}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

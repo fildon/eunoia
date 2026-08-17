@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getMondayFirstWeekday, WEEKDAY_LABELS } from "./date";
 
 export type MoodEntry = {
   id: string;
@@ -75,4 +76,27 @@ export function getTagUsage(entries: MoodEntry[]): string[] {
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([tag]) => tag);
+}
+
+export type WeekdayAverage = {
+  weekday: string; // abbreviated label, e.g. "Mon"
+  average: number | null; // null when count === 0
+  count: number;
+};
+
+export function getWeekdayAverages(entries: MoodEntry[]): WeekdayAverage[] {
+  const sums = new Array(7).fill(0);
+  const counts = new Array(7).fill(0);
+
+  for (const entry of entries) {
+    const idx = getMondayFirstWeekday(entry.entry_date);
+    sums[idx] += entry.mood;
+    counts[idx] += 1;
+  }
+
+  return WEEKDAY_LABELS.map((label, idx) => ({
+    weekday: label,
+    average: counts[idx] > 0 ? Number((sums[idx] / counts[idx]).toFixed(2)) : null,
+    count: counts[idx],
+  }));
 }
