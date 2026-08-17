@@ -14,7 +14,7 @@ export default async function TrendsPage() {
   });
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-2 p-8">
+    <main id="main-content" className="flex flex-1 flex-col items-center gap-2 p-8">
       <h1 className="mb-4 text-xl font-semibold">Trends</h1>
       <MoodTrendChart entries={entries} />
     </main>

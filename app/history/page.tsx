@@ -7,7 +7,7 @@ export default async function HistoryPage() {
   const entries = await listEntries(supabase);
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-2 p-8">
+    <main id="main-content" className="flex flex-1 flex-col items-center gap-2 p-8">
       <h1 className="mb-4 text-xl font-semibold">History</h1>
       <MoodHistoryList entries={entries} />
     </main>

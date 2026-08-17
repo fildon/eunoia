@@ -131,6 +131,7 @@ export function MoodEntryForm({
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={selected}
                 onClick={() => {
                   setMood(option.value);
                   setStatus("idle");
@@ -140,13 +141,15 @@ export function MoodEntryForm({
                     ? { borderColor: color, backgroundColor: `${color}22` }
                     : undefined
                 }
-                className={`flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition ${
+                className={`flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
                   selected
                     ? ""
                     : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 }`}
               >
-                <span className="text-2xl">{option.emoji}</span>
+                <span className="text-2xl" aria-hidden="true">
+                  {option.emoji}
+                </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {option.label}
                 </span>
@@ -165,11 +168,12 @@ export function MoodEntryForm({
             <button
               key={tag}
               type="button"
+              aria-pressed={tags.includes(tag)}
               onClick={() => {
                 toggleTag(tag);
                 setStatus("idle");
               }}
-              className={`rounded-full border px-3 py-1.5 text-sm transition ${
+              className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
                 tags.includes(tag)
                   ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -214,7 +218,7 @@ export function MoodEntryForm({
         type="button"
         onClick={handleSave}
         disabled={mood === null || status === "saving"}
-        className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
+        className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
       >
         {status === "saving"
           ? "Saving..."
@@ -224,8 +228,11 @@ export function MoodEntryForm({
               ? "Update today's entry"
               : "Save today's entry"}
       </button>
+      <div role="status" aria-live="polite" className="sr-only">
+        {status === "saved" && "Entry saved."}
+      </div>
       {status === "error" && (
-        <p className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" aria-live="assertive" className="text-sm text-red-600 dark:text-red-400">
           Something went wrong saving your entry. Please try again.
         </p>
       )}
