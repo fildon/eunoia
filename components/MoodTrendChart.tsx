@@ -20,6 +20,66 @@ function formatShortDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function TooltipCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md dark:border-gray-700 dark:bg-gray-800">
+      {children}
+    </div>
+  );
+}
+
+function TooltipTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1 font-semibold text-gray-900 dark:text-gray-50">{children}</p>
+  );
+}
+
+function MoodPointTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{ payload: { mood: number } }>;
+}) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+  return (
+    <TooltipCard>
+      <TooltipTitle>{label}</TooltipTitle>
+      <p className="text-gray-700 dark:text-gray-200">Mood: {payload[0].payload.mood}</p>
+    </TooltipCard>
+  );
+}
+
+function AverageTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{ payload: { average: number | null; count: number } }>;
+}) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+  const { average, count } = payload[0].payload;
+  return (
+    <TooltipCard>
+      <TooltipTitle>{label}</TooltipTitle>
+      <p className="text-gray-700 dark:text-gray-200">
+        Average: {average === null ? "—" : average}
+      </p>
+      <p className="text-gray-700 dark:text-gray-200">
+        Total entries: {count}
+      </p>
+    </TooltipCard>
+  );
+}
+
 export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
   const chartData = [...entries]
     .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
@@ -60,7 +120,7 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" strokeOpacity={0.3} />
             <XAxis dataKey="date" tick={axisTick} />
             <YAxis domain={[1, 5]} allowDecimals={false} tick={axisTick} />
-            <Tooltip />
+            <Tooltip content={<MoodPointTooltip />} />
             <Line
               type="monotone"
               dataKey="mood"
@@ -101,7 +161,7 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
             <BarChart data={tagAverages} layout="vertical" margin={{ left: 10 }}>
               <XAxis type="number" domain={[0, 5]} tick={axisTick} />
               <YAxis dataKey="tag" type="category" width={90} tick={axisTick} />
-              <Tooltip />
+              <Tooltip content={<AverageTooltip />} />
               <Bar dataKey="average" radius={[0, 4, 4, 0]}>
                 {tagAverages.map((entry) => (
                   <Cell
@@ -123,7 +183,7 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
           <BarChart data={weekdayAverages} margin={{ left: -20 }}>
             <XAxis dataKey="weekday" tick={axisTick} />
             <YAxis domain={[0, 5]} allowDecimals={false} tick={axisTick} />
-            <Tooltip />
+            <Tooltip content={<AverageTooltip />} />
             <Bar dataKey="average" radius={[4, 4, 0, 0]}>
               {weekdayAverages.map((entry) => (
                 <Cell
