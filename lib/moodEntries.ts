@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMondayFirstWeekday, WEEKDAY_LABELS } from "./date";
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 export type MoodEntry = {
   id: string;
   user_id: string;
@@ -99,4 +101,31 @@ export function getWeekdayAverages(entries: MoodEntry[]): WeekdayAverage[] {
     average: counts[idx] > 0 ? Number((sums[idx] / counts[idx]).toFixed(2)) : null,
     count: counts[idx],
   }));
+}
+
+// Trailing calendar-day average ending on each entry's date, keyed by
+// entry_date. Missed days thin the average out (fewer entries in the
+// window) rather than being skipped over like a last-N-entries average
+// would do.
+export function getRollingAverages(
+  entries: MoodEntry[],
+  windowDays: number,
+): Map<string, number> {
+  const sorted = [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date));
+  const result = new Map<string, number>();
+
+  let start = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const date = new Date(`${sorted[i].entry_date}T00:00:00`);
+    const cutoff = new Date(date.getTime() - (windowDays - 1) * MS_PER_DAY);
+    while (start < i && new Date(`${sorted[start].entry_date}T00:00:00`) < cutoff) {
+      start++;
+    }
+
+    let sum = 0;
+    for (let j = start; j <= i; j++) sum += sorted[j].mood;
+    result.set(sorted[i].entry_date, Number((sum / (i - start + 1)).toFixed(2)));
+  }
+
+  return result;
 }
