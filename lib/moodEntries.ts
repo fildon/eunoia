@@ -129,13 +129,17 @@ export function getDailySeries(
   let windowCount = 0;
   const series: DailyMoodPoint[] = [];
 
-  for (let day = startDay - windowDays + 1; day <= endDay; day++) {
+  // Start early enough that the first row's window is full.
+  const firstWindowDay = startDay - windowDays + 1;
+  for (let day = firstWindowDay; day <= endDay; day++) {
     const mood = moodByDay.get(day);
     if (mood !== undefined) {
       windowSum += mood;
       windowCount++;
     }
-    const leaving = moodByDay.get(day - windowDays);
+    // Only drop a day that was added in an earlier iteration.
+    const leavingDay = day - windowDays;
+    const leaving = leavingDay >= firstWindowDay ? moodByDay.get(leavingDay) : undefined;
     if (leaving !== undefined) {
       windowSum -= leaving;
       windowCount--;
