@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
+import { TimeZoneSync } from "@/components/TimeZoneSync";
+import { getRequestTimeZone } from "@/lib/timeZone";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,11 +20,13 @@ export const metadata: Metadata = {
   description: "A daily mood tracker",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const timeZone = await getRequestTimeZone();
+
   return (
     <html
       lang="en"
@@ -35,6 +39,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
+        <TimeZoneSync serverTimeZone={timeZone} />
         <NavBar />
         {children}
       </body>

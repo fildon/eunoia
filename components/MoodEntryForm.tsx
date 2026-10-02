@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getEntryByDate, upsertEntry, type MoodEntry } from "@/lib/moodEntries";
-import { formatDisplayDate, toDateString } from "@/lib/date";
+import { formatDisplayDate, todayDateString } from "@/lib/date";
 import { moodColor } from "@/lib/moodColor";
 
 const MOOD_OPTIONS = [
@@ -17,10 +17,14 @@ const MOOD_OPTIONS = [
 
 export function MoodEntryForm({
   userId,
+  initialToday,
   initialEntry,
   existingTags,
 }: {
   userId: string;
+  // Today's date in the user's zone, as the server saw it (see
+  // lib/timeZone.ts) — so the first render matches the server's.
+  initialToday: string;
   initialEntry: MoodEntry | null;
   existingTags: string[];
 }) {
@@ -32,12 +36,14 @@ export function MoodEntryForm({
   );
   const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagText, setNewTagText] = useState("");
-  const [today, setToday] = useState(() => new Date());
+  const [today, setToday] = useState(initialToday);
 
   // Tab stays open across midnight, so the day can roll over without a
   // refresh. Poll (and check on refocus) for that, and reload today's entry
   // when it happens — otherwise saving would write yesterday's stale
-  // mood/tags into the new day's row.
+  // mood/tags into the new day's row. The device clock is the authority on
+  // "today", so this also runs on mount in case the server rendered for a
+  // stale time zone (e.g. just after travelling).
   const todayRef = useRef(today);
   useEffect(() => {
     todayRef.current = today;
@@ -45,17 +51,18 @@ export function MoodEntryForm({
 
   useEffect(() => {
     async function checkForNewDay() {
-      const now = new Date();
-      if (toDateString(now) === toDateString(todayRef.current)) return;
+      const deviceToday = todayDateString();
+      if (deviceToday === todayRef.current) return;
 
-      setToday(now);
+      setToday(deviceToday);
       const supabase = createClient();
-      const freshEntry = await getEntryByDate(supabase, toDateString(now));
+      const freshEntry = await getEntryByDate(supabase, deviceToday);
       setMood(freshEntry?.mood ?? null);
       setTags(freshEntry?.tags ?? []);
       setStatus("idle");
     }
 
+    checkForNewDay();
     const interval = setInterval(checkForNewDay, 60_000);
     document.addEventListener("visibilitychange", checkForNewDay);
     window.addEventListener("focus", checkForNewDay);
@@ -100,7 +107,7 @@ export function MoodEntryForm({
     try {
       const supabase = createClient();
       await upsertEntry(supabase, userId, {
-        entry_date: toDateString(today),
+        entry_date: today,
         mood,
         tags,
       });

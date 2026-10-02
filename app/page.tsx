@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { listEntries, getTagUsage } from "@/lib/moodEntries";
 import { MoodEntryForm } from "@/components/MoodEntryForm";
-import { todayDateString } from "@/lib/date";
+import { getRequestToday } from "@/lib/timeZone";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -12,8 +12,8 @@ export default async function TodayPage() {
   if (!session) return null;
 
   const entries = await listEntries(supabase);
-  const todayEntry =
-    entries.find((entry) => entry.entry_date === todayDateString()) ?? null;
+  const today = await getRequestToday();
+  const todayEntry = entries.find((entry) => entry.entry_date === today) ?? null;
   const existingTags = getTagUsage(entries);
 
   return (
@@ -21,6 +21,7 @@ export default async function TodayPage() {
       <h1 className="mb-4 text-xl font-semibold">Today</h1>
       <MoodEntryForm
         userId={session.user.id}
+        initialToday={today}
         initialEntry={todayEntry}
         existingTags={existingTags}
       />
