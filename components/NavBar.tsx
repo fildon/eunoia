@@ -26,38 +26,35 @@ export function NavBar() {
   }
 
   return (
-    <nav
-      aria-label="Main"
-      className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-800"
-    >
-      <div className="flex items-center gap-4">
-        <span className="font-semibold">Eunoia</span>
-        <div className="flex gap-1">
-          {LINKS.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={`rounded-md px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-                  active
-                    ? "font-medium text-blue-600 dark:text-blue-400"
-                    : "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+    <nav aria-label="Main" className="border-b border-line bg-canvas">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-4 py-2.5">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <span className="font-semibold tracking-tight">Eunoia</span>
+          <div className="flex gap-1">
+            {LINKS.map((link) => {
+              const active = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    active ? "bg-pill text-pill-ink" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
+        <button
+          onClick={signOut}
+          className="focus-ring rounded-full px-3 py-1.5 text-sm text-muted transition hover:text-ink"
+        >
+          Sign out
+        </button>
       </div>
-      <button
-        onClick={signOut}
-        className="rounded-md px-3 py-2 text-sm text-gray-600 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-gray-400 dark:hover:text-gray-100"
-      >
-        Sign out
-      </button>
     </nav>
   );
 }

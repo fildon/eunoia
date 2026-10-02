@@ -52,21 +52,28 @@ export function fromDayNumber(dayNumber: number): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatDisplayDate(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+// Every user-facing date is formatted in this one fixed locale. Leaving it
+// to the runtime default would make the server (typically en-US) and the
+// browser disagree, which breaks hydration of client components and makes
+// server-rendered dates use a different style from client-rendered ones.
+const DISPLAY_LOCALE = "en-GB";
+
+// Formats a day number as a local calendar date (so it can't shift a day
+// the way formatting the UTC midnight Date directly could).
+export function formatDay(dayNumber: number, options: Intl.DateTimeFormatOptions): string {
+  return new Date(`${fromDayNumber(dayNumber)}T00:00:00`).toLocaleDateString(DISPLAY_LOCALE, options);
 }
 
-// Fixed English abbreviations in Monday-first order — intentionally not
-// locale-derived (unlike formatDisplayDate above), since callers need exact
-// labels and ordering regardless of browser locale.
+export function formatDisplayDate(dateStr: string): string {
+  return formatDay(toDayNumber(dateStr), { weekday: "long", day: "numeric", month: "long" });
+}
+
+// Fixed English abbreviations in Monday-first order — kept as a literal
+// list (rather than formatted) since callers index it by weekday number.
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
-// Returns 0-6 where 0=Monday..6=Sunday for a "YYYY-MM-DD" entry_date string.
-export function getMondayFirstWeekday(dateStr: string): number {
+// Returns 0-6 where 0=Monday..6=Sunday for a day number (see toDayNumber).
+export function getMondayFirstWeekday(dayNumber: number): number {
   // Day 0 (1970-01-01) was a Thursday, i.e. index 3 Monday-first.
-  return (((toDayNumber(dateStr) + 3) % 7) + 7) % 7;
+  return (((dayNumber + 3) % 7) + 7) % 7;
 }

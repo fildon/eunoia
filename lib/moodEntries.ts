@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fromDayNumber, getMondayFirstWeekday, toDayNumber, WEEKDAY_LABELS } from "./date";
 
 export type MoodEntry = {
   id: string;
@@ -76,84 +75,4 @@ export function getTagUsage(entries: MoodEntry[]): string[] {
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([tag]) => tag);
-}
-
-export type WeekdayAverage = {
-  weekday: string; // abbreviated label, e.g. "Mon"
-  average: number | null; // null when count === 0
-  count: number;
-};
-
-export function getWeekdayAverages(entries: MoodEntry[]): WeekdayAverage[] {
-  const sums = new Array(7).fill(0);
-  const counts = new Array(7).fill(0);
-
-  for (const entry of entries) {
-    const idx = getMondayFirstWeekday(entry.entry_date);
-    sums[idx] += entry.mood;
-    counts[idx] += 1;
-  }
-
-  return WEEKDAY_LABELS.map((label, idx) => ({
-    weekday: label,
-    average: counts[idx] > 0 ? Number((sums[idx] / counts[idx]).toFixed(2)) : null,
-    count: counts[idx],
-  }));
-}
-
-export type DailyMoodPoint = {
-  day: number; // day number (see toDayNumber)
-  date: string; // YYYY-MM-DD
-  mood: number | null; // null on a day with no entry
-  avg: number | null; // trailing windowDays-day average; null if no entries in the window
-  avgCount: number; // entries the average is based on
-};
-
-// One row per calendar day from startDay to endDay inclusive, so missed days
-// show up as gaps rather than being skipped. The rolling average is defined
-// on every day with at least one entry in its trailing window (including
-// missed days and days before startDay), and is only absent when the whole
-// window is empty.
-export function getDailySeries(
-  entries: MoodEntry[],
-  startDay: number,
-  endDay: number,
-  windowDays: number,
-): DailyMoodPoint[] {
-  const moodByDay = new Map<number, number>();
-  for (const entry of entries) {
-    moodByDay.set(toDayNumber(entry.entry_date), entry.mood);
-  }
-
-  let windowSum = 0;
-  let windowCount = 0;
-  const series: DailyMoodPoint[] = [];
-
-  // Start early enough that the first row's window is full.
-  const firstWindowDay = startDay - windowDays + 1;
-  for (let day = firstWindowDay; day <= endDay; day++) {
-    const mood = moodByDay.get(day);
-    if (mood !== undefined) {
-      windowSum += mood;
-      windowCount++;
-    }
-    // Only drop a day that was added in an earlier iteration.
-    const leavingDay = day - windowDays;
-    const leaving = leavingDay >= firstWindowDay ? moodByDay.get(leavingDay) : undefined;
-    if (leaving !== undefined) {
-      windowSum -= leaving;
-      windowCount--;
-    }
-
-    if (day < startDay) continue;
-    series.push({
-      day,
-      date: fromDayNumber(day),
-      mood: mood ?? null,
-      avg: windowCount > 0 ? Number((windowSum / windowCount).toFixed(2)) : null,
-      avgCount: windowCount,
-    });
-  }
-
-  return series;
 }

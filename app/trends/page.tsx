@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { listEntries } from "@/lib/moodEntries";
-import { MoodTrendChart } from "@/components/MoodTrendChart";
+import { Page } from "@/components/Page";
+import { TrendsView } from "@/components/trends/TrendsView";
 import { getRequestToday } from "@/lib/timeZone";
 
 export default async function TrendsPage() {
@@ -10,9 +11,8 @@ export default async function TrendsPage() {
   const today = await getRequestToday();
 
   return (
-    <main id="main-content" className="flex flex-1 flex-col items-center gap-2 p-8">
-      <h1 className="mb-4 text-xl font-semibold">Trends</h1>
-      <MoodTrendChart entries={entries} today={today} />
-    </main>
+    <Page title="Trends">
+      <TrendsView entries={entries} today={today} />
+    </Page>
   );
 }

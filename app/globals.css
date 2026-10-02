@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
+/* Warm stone neutrals; the dark "pill" is the one accent (selected states,
+   primary buttons). Mood colours live in lib/moodColor.ts. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --canvas: #fafaf9;
+  --surface: #ffffff;
+  --ink: #1c1917;
+  --muted: #6b6763;
+  --faint: #a8a29e;
+  --line: #e7e5e4;
+  --empty: #efedeb;
+  --pill: #1c1917;
+  --pill-ink: #fafaf9;
+  --up: #3f8f2a;
+  --down: #c2410c;
+  --whisker: #57534e;
+  --danger: #b91c1c;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --canvas: #0c0a09;
+    --surface: #171513;
+    --ink: #f5f5f4;
+    --muted: #a8a29e;
+    --faint: #6b6763;
+    --line: #292524;
+    --empty: #221f1d;
+    --pill: #f5f5f4;
+    --pill-ink: #0c0a09;
+    --up: #6cc04f;
+    --down: #f2793f;
+    --whisker: #a8a29e;
+    --danger: #f87171;
+    color-scheme: dark;
   }
 }
 
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-empty: var(--empty);
+  --color-pill: var(--pill);
+  --color-pill-ink: var(--pill-ink);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-whisker: var(--whisker);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+}
+
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }

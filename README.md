@@ -21,9 +21,15 @@ URL.
   new one. "Today" is your device's local date, wherever you are — entries
   are plain calendar dates, like a paper diary.
 - **History**: a chronological list of past entries, color-coded by mood.
-- **Trends**: mood over time with a 7-day rolling average, plus average mood
-  per tag and per weekday, for the last 7/30/90 days or all time. The chart
-  is on a calendar time axis, so missed days show as gaps.
+- **Trends**: for the last 30/90 days, year, or all time:
+  - a few plain sentences on what stands out (only differences unlikely to
+    be chance are mentioned)
+  - a calendar with one square per day, with missed days left blank, and
+    each weekday's average compared with the period's
+  - how much higher or lower mood is on days with each tag than without,
+    with a likely range. A switch shows the effect on the *next* day.
+    Tags with fewer than 5 days with or without them aren't scored.
+  - the mix of moods per week, month or quarter
 - **Sign out**: top-right of the nav bar.
 
 Data is private to your account — stored in Supabase with row-level security
@@ -36,7 +42,7 @@ so only you can ever read or write your own entries.
 - **Next.js 16** (App Router, TypeScript) — deployed on **Vercel**
 - **Supabase** — Postgres database + magic-link auth
 - **Tailwind CSS v4** — styling, with dark-mode variants throughout
-- **Recharts** — trend charts
+- Trends charts are hand-drawn SVG; the stats behind them are in `lib/insights.ts`
 
 ### Project layout
 
@@ -48,11 +54,14 @@ app/
   history/page.tsx       Past entries list
   trends/page.tsx        Charts
   icon.svg               Favicon
-components/               UI components (form, nav, history list, chart)
+components/               UI components (form, nav, history list, page frame)
+  trends/                 Trends page: insight sentences and the SVG charts
 lib/
   supabase/client.ts     Browser Supabase client
   supabase/server.ts     Server Supabase client (Server Components)
   moodEntries.ts         Data access (get/upsert/list mood_entries)
+  insights.ts             Trends stats: tag effects, weekday stats, mood mix,
+                           headline sentences
   moodColor.ts            The red→green mood color palette
   date.ts                 YYYY-MM-DD date helpers; day-number arithmetic (DST-safe)
   timeZone.ts             Server-side "today" from the `tz` cookie (the server
