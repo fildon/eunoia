@@ -16,10 +16,12 @@ URL.
 - **Today**: pick a mood (1–5, colored red → green) and any tags that
   influenced it (Good Sleep, Bad Sleep, Exercise, Stress, Friends, Health).
   Saving again the same day updates that day's entry rather than creating a
-  new one.
+  new one. "Today" is your device's local date, wherever you are — entries
+  are plain calendar dates, like a paper diary.
 - **History**: a chronological list of past entries, color-coded by mood.
-- **Trends**: a line chart of mood over the last 90 days, plus average mood
-  per tag.
+- **Trends**: mood over time with a 7-day rolling average, plus average mood
+  per tag and per weekday, for the last 7/30/90 days or all time. The chart
+  is on a calendar time axis, so missed days show as gaps.
 - **Sign out**: top-right of the nav bar.
 
 Data is private to your account — stored in Supabase with row-level security
@@ -51,7 +53,9 @@ lib/
   moodEntries.ts         Data access (get/upsert/list mood_entries)
   tags.ts                 The fixed list of mood tags — edit here to add/remove tags
   moodColor.ts            The red→green mood color palette
-  date.ts                 Local (not UTC) YYYY-MM-DD date helpers
+  date.ts                 YYYY-MM-DD date helpers; day-number arithmetic (DST-safe)
+  timeZone.ts             Server-side "today" from the `tz` cookie (the server
+                           runs in UTC) — kept in sync by components/TimeZoneSync
 proxy.ts                  Session refresh + auth gate (Next.js 16's replacement
                            for middleware.ts) — also enforces the single-user
                            allowlist

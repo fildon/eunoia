@@ -1,7 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getMondayFirstWeekday, WEEKDAY_LABELS } from "./date";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { fromDayNumber, getMondayFirstWeekday, toDayNumber, WEEKDAY_LABELS } from "./date";
 
 export type MoodEntry = {
   id: string;
@@ -103,29 +101,55 @@ export function getWeekdayAverages(entries: MoodEntry[]): WeekdayAverage[] {
   }));
 }
 
-// Trailing calendar-day average ending on each entry's date, keyed by
-// entry_date. Missed days thin the average out (fewer entries in the
-// window) rather than being skipped over like a last-N-entries average
-// would do.
-export function getRollingAverages(
+export type DailyMoodPoint = {
+  day: number; // day number (see toDayNumber)
+  date: string; // YYYY-MM-DD
+  mood: number | null; // null on a day with no entry
+  avg: number | null; // trailing windowDays-day average; null if no entries in the window
+  avgCount: number; // entries the average is based on
+};
+
+// One row per calendar day from startDay to endDay inclusive, so missed days
+// show up as gaps rather than being skipped. The rolling average is defined
+// on every day with at least one entry in its trailing window (including
+// missed days and days before startDay), and is only absent when the whole
+// window is empty.
+export function getDailySeries(
   entries: MoodEntry[],
+  startDay: number,
+  endDay: number,
   windowDays: number,
-): Map<string, number> {
-  const sorted = [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date));
-  const result = new Map<string, number>();
-
-  let start = 0;
-  for (let i = 0; i < sorted.length; i++) {
-    const date = new Date(`${sorted[i].entry_date}T00:00:00`);
-    const cutoff = new Date(date.getTime() - (windowDays - 1) * MS_PER_DAY);
-    while (start < i && new Date(`${sorted[start].entry_date}T00:00:00`) < cutoff) {
-      start++;
-    }
-
-    let sum = 0;
-    for (let j = start; j <= i; j++) sum += sorted[j].mood;
-    result.set(sorted[i].entry_date, Number((sum / (i - start + 1)).toFixed(2)));
+): DailyMoodPoint[] {
+  const moodByDay = new Map<number, number>();
+  for (const entry of entries) {
+    moodByDay.set(toDayNumber(entry.entry_date), entry.mood);
   }
 
-  return result;
+  let windowSum = 0;
+  let windowCount = 0;
+  const series: DailyMoodPoint[] = [];
+
+  for (let day = startDay - windowDays + 1; day <= endDay; day++) {
+    const mood = moodByDay.get(day);
+    if (mood !== undefined) {
+      windowSum += mood;
+      windowCount++;
+    }
+    const leaving = moodByDay.get(day - windowDays);
+    if (leaving !== undefined) {
+      windowSum -= leaving;
+      windowCount--;
+    }
+
+    if (day < startDay) continue;
+    series.push({
+      day,
+      date: fromDayNumber(day),
+      mood: mood ?? null,
+      avg: windowCount > 0 ? Number((windowSum / windowCount).toFixed(2)) : null,
+      avgCount: windowCount,
+    });
+  }
+
+  return series;
 }

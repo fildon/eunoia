@@ -17,13 +17,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getRollingAverages, getWeekdayAverages, type MoodEntry } from "@/lib/moodEntries";
+import {
+  getDailySeries,
+  getWeekdayAverages,
+  type DailyMoodPoint,
+  type MoodEntry,
+} from "@/lib/moodEntries";
 import { moodColor } from "@/lib/moodColor";
-import { toDateString } from "@/lib/date";
+import { fromDayNumber, getMondayFirstWeekday, toDayNumber } from "@/lib/date";
 
-function formatShortDate(dateStr: string): string {
-  const date = new Date(`${dateStr}T00:00:00`);
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const ROLLING_WINDOW_DAYS = 7;
+
+function formatDayNumber(day: number, options: Intl.DateTimeFormatOptions): string {
+  return new Date(`${fromDayNumber(day)}T00:00:00`).toLocaleDateString(undefined, options);
 }
 
 const RANGE_OPTIONS = [
@@ -35,20 +41,50 @@ const RANGE_OPTIONS = [
 
 type RangeLabel = (typeof RANGE_OPTIONS)[number]["label"];
 
-function cutoffDateString(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return toDateString(date);
+// X-axis ticks at fixed calendar boundaries (rather than every Nth data
+// point), coarsening as the range grows so labels don't crowd.
+function getCalendarTicks(
+  startDay: number,
+  endDay: number,
+): { ticks: number[]; format: (day: number) => string } {
+  const span = endDay - startDay + 1;
+  const days = Array.from({ length: span }, (_, i) => startDay + i);
+  const shortDate = (day: number) => formatDayNumber(day, { month: "short", day: "numeric" });
+  const monthYear = (day: number) => formatDayNumber(day, { month: "short", year: "2-digit" });
+
+  if (span <= 10) {
+    return { ticks: days, format: shortDate };
+  }
+  if (span <= 45) {
+    return {
+      ticks: days.filter((day) => getMondayFirstWeekday(fromDayNumber(day)) === 0),
+      format: shortDate,
+    };
+  }
+  const monthStarts = days.filter((day) => fromDayNumber(day).endsWith("-01"));
+  if (span <= 200) {
+    return { ticks: monthStarts, format: monthYear };
+  }
+  const quarterStarts = monthStarts.filter((day) =>
+    ["01", "04", "07", "10"].includes(fromDayNumber(day).slice(5, 7)),
+  );
+  if (span <= 800) {
+    return { ticks: quarterStarts, format: monthYear };
+  }
+  return {
+    ticks: quarterStarts.filter((day) => fromDayNumber(day).slice(5, 7) === "01"),
+    format: (day) => formatDayNumber(day, { year: "numeric" }),
+  };
 }
 
 // The Y domain is padded past [1, 5] and the X axis past the first/last
-// date so that dots at the edges of the chart aren't clipped by the plot
+// day so that dots at the edges of the chart aren't clipped by the plot
 // area — see MoodTrendChart. That padding would otherwise stretch the grid
 // (and the Y axis's own line, rendered separately below) past the data's
-// actual range, so this bounds both to the real [1, 5] / first-to-last-date
+// actual range, so this bounds both to the real [1, 5] / first-to-last-day
 // extent using the chart's own scales. The YAxis element itself renders
 // with `axisLine={false}` so only this trimmed line shows.
-function MoodOverTimeAxisLines({ firstDate, lastDate }: { firstDate: string; lastDate: string }) {
+function MoodOverTimeAxisLines({ firstDay, lastDay }: { firstDay: number; lastDay: number }) {
   const xScale = useXAxisScale();
   const yScale = useYAxisScale();
   const plotArea = usePlotArea();
@@ -65,8 +101,8 @@ function MoodOverTimeAxisLines({ firstDate, lastDate }: { firstDate: string; las
     return <CartesianGrid {...gridProps} />;
   }
 
-  const x1 = xScale(firstDate);
-  const x2 = xScale(lastDate);
+  const x1 = xScale(firstDay);
+  const x2 = xScale(lastDay);
   const y1 = yScale(5);
   const y2 = yScale(1);
 
@@ -139,7 +175,68 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
   );
 }
 
-export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
+// The mood-over-time chart has one row per calendar day, so it gets its own
+// tooltip: it names missed days explicitly and shows how many days a
+// rolling average actually covers. It looks the row up by the hovered day
+// (the axis label) because Recharts drops null values from `payload`.
+function MoodOverTimeTooltip({
+  active,
+  label,
+  payload,
+  pointsByDay,
+}: TooltipContentProps & { pointsByDay: Map<number, DailyMoodPoint> }) {
+  const point =
+    (typeof label === "number" ? pointsByDay.get(label) : undefined) ??
+    (payload?.[0]?.payload as DailyMoodPoint | undefined);
+  if (!active || !point) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-md dark:border-gray-700 dark:bg-gray-800">
+      <p className="mb-1 font-medium text-gray-900 dark:text-gray-100">
+        {formatDayNumber(point.day, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+      </p>
+      <ul className="flex flex-col gap-0.5">
+        <li className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+          {point.mood === null ? (
+            <span className="text-gray-500 dark:text-gray-400">No entry</span>
+          ) : (
+            <>
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: moodColor(point.mood) }}
+              />
+              <span>Mood: {point.mood}</span>
+            </>
+          )}
+        </li>
+        {point.avg !== null && (
+          <li className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+            <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-gray-600" />
+            <span>
+              {ROLLING_WINDOW_DAYS}-day avg: {point.avg}
+              <span className="text-gray-500 dark:text-gray-400">
+                {" "}
+                ({point.avgCount} of {ROLLING_WINDOW_DAYS} days)
+              </span>
+            </span>
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+export function MoodTrendChart({
+  entries,
+  today,
+}: {
+  entries: MoodEntry[];
+  // Today's date in the user's time zone (see lib/timeZone.ts), passed from
+  // the server so server and client render the same range.
+  today: string;
+}) {
   const [selectedRange, setSelectedRange] = useState<RangeLabel>("30d");
 
   if (entries.length === 0) {
@@ -151,23 +248,27 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
   }
 
   const selectedOption = RANGE_OPTIONS.find((option) => option.label === selectedRange)!;
-  const visibleEntries =
+
+  // Ranges are calendar-bounded: "7d" is today and the 6 days before it,
+  // however many of those have entries. The end is normally today, but can
+  // be later if an entry was logged in a time zone that's ahead of this one.
+  const entryDays = entries.map((entry) => toDayNumber(entry.entry_date));
+  const endDay = Math.max(toDayNumber(today), ...entryDays);
+  const startDay =
     selectedOption.days === null
-      ? entries
-      : entries.filter((entry) => entry.entry_date >= cutoffDateString(selectedOption.days));
+      ? Math.min(endDay, ...entryDays)
+      : toDayNumber(today) - (selectedOption.days - 1);
 
-  // Rolling average is computed from full history (not visibleEntries) so
-  // points near the start of a filtered window still get a correct
-  // trailing average using days just before the window.
-  const rollingAverages = getRollingAverages(entries, 7);
+  const visibleEntries = entries.filter((entry) => {
+    const day = toDayNumber(entry.entry_date);
+    return day >= startDay && day <= endDay;
+  });
 
-  const chartData = [...visibleEntries]
-    .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
-    .map((entry) => ({
-      date: formatShortDate(entry.entry_date),
-      mood: entry.mood,
-      avg: rollingAverages.get(entry.entry_date),
-    }));
+  // Built from full history (not visibleEntries) so days near the start of
+  // the range still get a correct trailing average using days before it.
+  const chartData = getDailySeries(entries, startDay, endDay, ROLLING_WINDOW_DAYS);
+  const pointsByDay = new Map(chartData.map((point) => [point.day, point]));
+  const xTicks = getCalendarTicks(startDay, endDay);
 
   const uniqueTags = Array.from(new Set(visibleEntries.flatMap((e) => e.tags)));
   const tagAverages = uniqueTags
@@ -214,15 +315,15 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
             </h2>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 8, left: -20 }}>
-                <MoodOverTimeAxisLines
-                  firstDate={chartData[0].date}
-                  lastDate={chartData[chartData.length - 1].date}
-                />
+                <MoodOverTimeAxisLines firstDay={startDay} lastDay={endDay} />
                 <XAxis
-                  dataKey="date"
+                  dataKey="day"
+                  type="number"
+                  domain={[startDay, endDay]}
+                  ticks={xTicks.ticks}
+                  tickFormatter={xTicks.format}
                   tick={axisTick}
                   padding={{ left: 12, right: 12 }}
-                  interval={6}
                 />
                 <YAxis
                   domain={[0.5, 5.5]}
@@ -230,7 +331,13 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
                   tick={axisTick}
                   axisLine={false}
                 />
-                <Tooltip content={ChartTooltip} />
+                <Tooltip
+                  content={(props) => (
+                    <MoodOverTimeTooltip {...props} pointsByDay={pointsByDay} />
+                  )}
+                />
+                {/* No connectNulls: the average only breaks where a whole
+                    7-day window has no entries, and that gap should show. */}
                 <Line
                   type="monotone"
                   dataKey="avg"
@@ -238,7 +345,6 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
                   strokeWidth={2.5}
                   dot={false}
                   isAnimationActive={false}
-                  connectNulls
                 />
                 <Line
                   type="monotone"
@@ -249,11 +355,12 @@ export function MoodTrendChart({ entries }: { entries: MoodEntry[] }) {
                   dot={(props: {
                     cx?: number;
                     cy?: number;
-                    payload?: { mood: number };
+                    payload?: DailyMoodPoint;
                     key?: React.Key | null;
                   }) => {
                     const { cx, cy, payload, key } = props;
-                    if (cx === undefined || cy === undefined || !payload) {
+                    // Missed days have a null mood and get no dot.
+                    if (cx == null || cy == null || payload?.mood == null) {
                       return <g key={key ?? undefined} />;
                     }
                     return (
