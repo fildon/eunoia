@@ -14,7 +14,9 @@ URL.
 - **Sign in**: enter your email on the login screen and click the link
   Supabase emails you. No password.
 - **Today**: pick a mood (1–5, colored red → green) and any tags that
-  influenced it (Good Sleep, Bad Sleep, Exercise, Stress, Friends, Health).
+  influenced it. Tags are free text: your existing ones are listed most-used
+  first, and "+ Add tag" creates a new one (matching an existing tag
+  case-insensitively, so "exercise" reuses "Exercise").
   Saving again the same day updates that day's entry rather than creating a
   new one. "Today" is your device's local date, wherever you are — entries
   are plain calendar dates, like a paper diary.
@@ -51,7 +53,6 @@ lib/
   supabase/client.ts     Browser Supabase client
   supabase/server.ts     Server Supabase client (Server Components)
   moodEntries.ts         Data access (get/upsert/list mood_entries)
-  tags.ts                 The fixed list of mood tags — edit here to add/remove tags
   moodColor.ts            The red→green mood color palette
   date.ts                 YYYY-MM-DD date helpers; day-number arithmetic (DST-safe)
   timeZone.ts             Server-side "today" from the `tz` cookie (the server
@@ -60,13 +61,16 @@ proxy.ts                  Session refresh + auth gate (Next.js 16's replacement
                            for middleware.ts) — also enforces the single-user
                            allowlist
 supabase/migration.sql    DB schema — run this in the Supabase SQL editor
+supabase/rename_legacy_tags.sql
+                          One-time rewrite of the old fixed-tag ids to
+                           free-text labels, for data from before free-text tags
 ```
 
 ### Local setup
 
 ```bash
 npm install
-cp .env.local.example .env.local   # fill in the three values below
+# create .env.local with the three values below
 npm run dev
 ```
 
@@ -112,11 +116,9 @@ exists`) so it's safe to re-run.
   Authentication → URL Configuration → Redirect URLs allow-list, alongside
   `http://localhost:3000/auth/callback` for local dev.
 
-### Customizing tags or colors
+### Customizing colors
 
-- Tags: edit the `MOOD_TAGS` array in `lib/tags.ts`. The `id` is stored in
-  the database per entry — renaming a `label` is safe and won't affect old
-  data, but changing an `id` will orphan any entries already tagged with the
-  old id (they'll just display the raw id instead of a label).
-- Mood colors: edit `MOOD_COLORS` in `lib/moodColor.ts` (keyed by mood value
-  1–5).
+Mood colors: edit `MOOD_COLORS` in `lib/moodColor.ts` (keyed by mood value
+1–5). Tags need no configuration — they're whatever text you've entered.
+Renaming one across past entries means an `array_replace` update in SQL, as
+in `supabase/rename_legacy_tags.sql`.
