@@ -25,15 +25,17 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifies the JWT locally against the project's (cached)
+  // asymmetric signing key, instead of getUser's round trip to Supabase Auth
+  // on every request. It still refreshes an expired session first.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
 
   const allowedEmail = process.env.ALLOWED_EMAIL?.toLowerCase();
   const isAllowedUser =
-    !!user && user.email?.toLowerCase() === allowedEmail;
+    !!claims && claims.email?.toLowerCase() === allowedEmail;
 
-  if (user && !isAllowedUser) {
+  if (claims && !isAllowedUser) {
     await supabase.auth.signOut();
   }
 

@@ -32,11 +32,19 @@ export function NavBar() {
           <span className="font-semibold tracking-tight">Eunoia</span>
           <div className="flex gap-1">
             {LINKS.map((link) => {
-              const active = pathname === link.href;
+              const active =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
+                  // Pages are dynamic (per-user data), so by default only their
+                  // loading shell is prefetched and each click waits on the
+                  // server. Prefetching the full page makes tab switches
+                  // instant; router.refresh() after a save invalidates these.
+                  prefetch={true}
                   aria-current={active ? "page" : undefined}
                   className={`focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition ${
                     active ? "bg-pill text-pill-ink" : "text-muted hover:text-ink"
