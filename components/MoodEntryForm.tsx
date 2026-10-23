@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getEntryByDate, upsertEntry, type MoodEntry } from "@/lib/moodEntries";
@@ -16,11 +17,14 @@ const MOOD_OPTIONS = [
   { value: 1, emoji: "😞", label: "Awful" },
 ];
 
+// Without `entryDate`, the form tracks today (rolling over at midnight).
+// With it, the form edits that fixed past date instead.
 export function MoodEntryForm({
   userId,
   initialToday,
   initialEntry,
   existingTags,
+  entryDate,
 }: {
   userId: string;
   // Today's date in the user's zone, as the server saw it (see
@@ -28,6 +32,7 @@ export function MoodEntryForm({
   initialToday: string;
   initialEntry: MoodEntry | null;
   existingTags: string[];
+  entryDate?: string;
 }) {
   const router = useRouter();
   const [mood, setMood] = useState<number | null>(initialEntry?.mood ?? null);
@@ -38,6 +43,8 @@ export function MoodEntryForm({
   const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagText, setNewTagText] = useState("");
   const [today, setToday] = useState(initialToday);
+  const isPastEntry = entryDate !== undefined;
+  const date = entryDate ?? today;
 
   // Tab stays open across midnight, so the day can roll over without a
   // refresh. Poll (and check on refocus) for that, and reload today's entry
@@ -51,6 +58,8 @@ export function MoodEntryForm({
   }, [today]);
 
   useEffect(() => {
+    if (isPastEntry) return;
+
     async function checkForNewDay() {
       const deviceToday = todayDateString();
       if (deviceToday === todayRef.current) return;
@@ -73,7 +82,7 @@ export function MoodEntryForm({
       document.removeEventListener("visibilitychange", checkForNewDay);
       window.removeEventListener("focus", checkForNewDay);
     };
-  }, []);
+  }, [isPastEntry]);
 
   // Tags already on this entry might not appear in existingTags (e.g. loaded before any other entry existed).
   const knownTags = Array.from(new Set([...existingTags, ...tags]));
@@ -108,7 +117,7 @@ export function MoodEntryForm({
     try {
       const supabase = createClient();
       await upsertEntry(supabase, userId, {
-        entry_date: today,
+        entry_date: date,
         mood,
         tags,
       });
@@ -124,10 +133,23 @@ export function MoodEntryForm({
 
   return (
     <>
-      <PageHeader eyebrow="Today" title={formatDisplayDate(today)} />
+      <PageHeader
+        eyebrow={
+          isPastEntry ? (
+            <Link href="/history" className="focus-ring rounded-sm transition hover:text-ink">
+              ← History
+            </Link>
+          ) : (
+            "Today"
+          )
+        }
+        title={formatDisplayDate(date)}
+      />
       <div className="flex w-full max-w-xl flex-col gap-10">
         <section className="flex flex-col gap-3">
-          <h2 className="text-[17px] font-semibold">How are you feeling?</h2>
+          <h2 className="text-[17px] font-semibold">
+            {isPastEntry ? "How were you feeling?" : "How are you feeling?"}
+          </h2>
           <div className="flex justify-between gap-2">
             {MOOD_OPTIONS.map((option) => {
               const selected = mood === option.value;
@@ -233,9 +255,13 @@ export function MoodEntryForm({
               ? "Saving..."
               : status === "saved"
                 ? "Saved ✓"
-                : initialEntry
-                  ? "Update today's entry"
-                  : "Save today's entry"}
+                : isPastEntry
+                  ? initialEntry
+                    ? "Update entry"
+                    : "Save entry"
+                  : initialEntry
+                    ? "Update today's entry"
+                    : "Save today's entry"}
           </button>
           <div role="status" aria-live="polite" className="sr-only">
             {status === "saved" && "Entry saved."}

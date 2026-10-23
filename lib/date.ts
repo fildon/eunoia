@@ -52,6 +52,12 @@ export function fromDayNumber(dayNumber: number): string {
   return `${year}-${month}-${day}`;
 }
 
+// True for a real calendar date in YYYY-MM-DD form (rejects e.g. 2026-02-30,
+// which would otherwise silently roll over into March).
+export function isValidDateString(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && fromDayNumber(toDayNumber(value)) === value;
+}
+
 // Every user-facing date is formatted in this one fixed locale. Leaving it
 // to the runtime default would make the server (typically en-US) and the
 // browser disagree, which breaks hydration of client components and makes

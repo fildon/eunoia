@@ -20,7 +20,8 @@ URL.
   Saving again the same day updates that day's entry rather than creating a
   new one. "Today" is your device's local date, wherever you are — entries
   are plain calendar dates, like a paper diary.
-- **History**: a chronological list of past entries, color-coded by mood.
+- **History**: a chronological list of past entries, color-coded by mood. Tap
+  an entry to edit it.
 - **Trends**: for the last 30/90 days, year, or all time:
   - a few plain sentences on what stands out (only differences unlikely to
     be chance are mentioned)
@@ -52,6 +53,7 @@ app/
   login/page.tsx         Magic-link sign-in
   auth/callback/route.ts OAuth/OTP code exchange
   history/page.tsx       Past entries list
+  history/[date]/page.tsx Edit (or add) the entry for a past date
   trends/page.tsx        Charts
   icon.svg               Favicon
 components/               UI components (form, nav, history list, page frame)

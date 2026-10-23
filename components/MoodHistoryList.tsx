@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { MoodEntry } from "@/lib/moodEntries";
 import { moodColor, moodEmoji } from "@/lib/moodColor";
 import { formatDay, toDayNumber } from "@/lib/date";
@@ -34,24 +35,33 @@ export function MoodHistoryList({ entries }: { entries: MoodEntry[] }) {
           <h2 className="eyebrow">{monthYear}</h2>
           <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-surface">
             {rows.map(({ entry, day }) => (
-              <li key={entry.id} className="flex items-center gap-3 px-4 py-2.5">
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-lg"
-                  style={{ backgroundColor: `${moodColor(entry.mood)}33` }}
-                  role="img"
-                  aria-label={`Mood ${entry.mood}`}
+              <li key={entry.id}>
+                <Link
+                  href={`/history/${entry.entry_date}`}
+                  className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-empty focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
                 >
-                  <span aria-hidden="true">{moodEmoji(entry.mood)}</span>
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-sm text-ink">{day}</span>
-                  {entry.tags.length > 0 && (
-                    <span className="truncate text-xs text-muted">{entry.tags.join(", ")}</span>
-                  )}
-                </div>
-                <span className="font-mono text-sm tabular-nums text-muted" aria-hidden="true">
-                  {entry.mood}
-                </span>
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-lg"
+                    style={{ backgroundColor: `${moodColor(entry.mood)}33` }}
+                    role="img"
+                    aria-label={`Mood ${entry.mood}`}
+                  >
+                    <span aria-hidden="true">{moodEmoji(entry.mood)}</span>
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-sm text-ink">{day}</span>
+                    {entry.tags.length > 0 && (
+                      <span className="truncate text-xs text-muted">{entry.tags.join(", ")}</span>
+                    )}
+                  </div>
+                  <span className="font-mono text-sm tabular-nums text-muted" aria-hidden="true">
+                    {entry.mood}
+                  </span>
+                  <span className="text-faint" aria-hidden="true">
+                    ›
+                  </span>
+                  <span className="sr-only">Edit entry</span>
+                </Link>
               </li>
             ))}
           </ul>
