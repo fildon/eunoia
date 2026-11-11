@@ -80,9 +80,9 @@ supabase/rename_legacy_tags.sql
 ### Local setup
 
 ```bash
-npm install
+pnpm install
 # create .env.local with the three values below
-npm run dev
+pnpm run dev
 ```
 
 Env vars (`.env.local`, gitignored):
