@@ -64,7 +64,9 @@ export function MoodCalendar({
   const statX = LABEL_WIDTH + weeks * pitch + 8;
 
   return (
-    <div ref={ref} className="w-full overflow-x-auto">
+    // When the calendar scrolls sideways, pad below it so an overlay scrollbar
+    // (e.g. Firefox on desktop, phones) sits under the Sun row, not on top of it.
+    <div ref={ref} className={`w-full overflow-x-auto ${svgWidth > width ? "pb-3" : ""}`}>
       {width > 0 && (
         <svg
           width={svgWidth}
