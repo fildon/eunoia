@@ -11,6 +11,9 @@ const LABEL_WIDTH = 32;
 const STAT_WIDTH = 46;
 const TOP = 20;
 const GAP = 3;
+const TIGHT_GAP = 2;
+const MIN_CELL = 10;
+const MAX_CELL = 28;
 
 // One square per day: weeks are columns (Monday at the top), so weekday
 // rows and seasonal runs both show without a separate chart. The column on
@@ -30,8 +33,12 @@ export function MoodCalendar({
   const weeks = Math.ceil((endDay - firstMonday + 1) / 7);
   // Fill the width, within limits; at phone width a long range scrolls
   // sideways inside the container rather than shrinking past legibility.
-  const cell = Math.max(10, Math.min(28, Math.floor((width - LABEL_WIDTH - STAT_WIDTH) / weeks) - GAP));
-  const pitch = cell + GAP;
+  // Tighten the gap to 2px before the cells hit their minimum, which is what
+  // lets a year (53–54 weeks) fit the desktop page without scrolling.
+  const fit = (gap: number) => Math.floor((width - LABEL_WIDTH - STAT_WIDTH) / weeks) - gap;
+  const gap = fit(GAP) >= MIN_CELL ? GAP : TIGHT_GAP;
+  const cell = Math.max(MIN_CELL, Math.min(MAX_CELL, fit(gap)));
+  const pitch = cell + gap;
   const svgWidth = LABEL_WIDTH + weeks * pitch + STAT_WIDTH;
   const svgHeight = TOP + 7 * pitch;
   const columnX = (day: number) => LABEL_WIDTH + Math.floor((day - firstMonday) / 7) * pitch;
